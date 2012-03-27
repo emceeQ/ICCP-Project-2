@@ -1,7 +1,7 @@
 
 PROGRAM wolff
       IMPLICIT NONE
-      INTEGER, PARAMETER:: length = 5, latsize = length * length
+      INTEGER, PARAMETER:: length = 10, latsize = length * length
       INTEGER, PARAMETER:: steps = 50
       REAL*8, PARAMETER:: tau = 10
       INTEGER:: lattice(latsize) = 1
@@ -22,7 +22,7 @@ PROGRAM wolff
         END IF
         END DO
 
-      WRITE(*, FMT = "(5(A,(1x)))")visual
+      WRITE(*, FMT = "(10(A,(1x)))")visual
 
       !Do the wolff algorithm and take measurements for the given number of
       !steps
@@ -40,7 +40,7 @@ PROGRAM wolff
         END IF
         END DO
 
-        WRITE(*, FMT = "(5(A,(1x)))")visual
+        WRITE(*, FMT = "(10(A,(1x)))")visual
         END DO
 
 
