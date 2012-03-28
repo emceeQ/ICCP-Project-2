@@ -2,11 +2,14 @@
 PROGRAM wolff
       IMPLICIT NONE
       INTEGER, PARAMETER:: length = 10, latsize = length * length
-      INTEGER, PARAMETER:: steps = 50
-      REAL*8, PARAMETER:: tau = 10
+      INTEGER, PARAMETER:: steps = 500000
+      REAL*8, PARAMETER:: tau = 0.1
+      REAL*8, PARAMETER:: beta = 1 / tau
       INTEGER:: lattice(latsize) = 1
-      INTEGER:: i, j
-      CHARACTER:: visual(latsize)
+      INTEGER:: i, mag
+      REAL*8:: magsum = 0
+
+      OPEN (UNIT=20,FILE="magnetization.dat",ACTION="write",STATUS="replace")
 
       !Initialize the seed
       CALL init_random_seed()
@@ -14,36 +17,27 @@ PROGRAM wolff
       !Initialize the lattice
       CALL init_lattice(lattice)
 
-      DO i = 1, latsize
-        if (lattice(i).EQ.1 ) THEN
-          visual(i) = "*"
-        else
-          visual(i) = "O"
-        END IF
-        END DO
-
-      WRITE(*, FMT = "(10(A,(1x)))")visual
+      !Initialize magnetization measurements
+      mag = SUM(lattice)
+      magsum = magsum + ABS(mag)
+      WRITE(20,*) 1,mag
 
       !Do the wolff algorithm and take measurements for the given number of
       !steps
-      DO j = 1, steps
-
-        print *,
+      DO i = 1, steps
 
         !Flip a cluster
         CALL flip_cluster(lattice)
-        DO i = 1, latsize
-        if (lattice(i).EQ.1 ) THEN
-          visual(i) = "*"
-        else
-          visual(i) = "O"
-        END IF
+
+        !Measure magnetization
+        mag = SUM(lattice)
+        magsum = magsum + ABS(mag)
+        WRITE(20,*) i + 1, mag
+
         END DO
 
-        WRITE(*, FMT = "(10(A,(1x)))")visual
-        END DO
-
-
+      CLOSE(20)
+      print *, magsum/DFLOAT(steps + 1)
       CONTAINS
 ! initialize the seed for random numbers based on the cpu clock
         SUBROUTINE init_random_seed()
@@ -176,17 +170,16 @@ PROGRAM wolff
           w = lat(west(neigh))
           e = lat(east(neigh))
 
-          ein = lat(neigh) * (n + s + e + w)
-          ef = -lat(neigh) * (n + s + e + w)
-          echan = ef - ein
-          mc = EXP(DFLOAT(echan) / tau)
+          echan = 2 * (lat(neigh)) * (n + s + e + w)
+
+          mc = 1 - EXP((beta) * DFLOAT(-echan))
 
           !generate random number
           CALL RANDOM_NUMBER(rand1)
 
           !determine whether a bond is built
-          bond = (rand1.LT.0.5)
-
+          bond = (rand1.LT.mc)
+!          print *, mc, rand1, bond
           END FUNCTION bond
 
       END PROGRAM

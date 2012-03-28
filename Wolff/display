@@ -1,0 +1,12 @@
+        DO i = 1, latsize
+        if (lattice(i).EQ.1 ) THEN
+          visual(i) = "*"
+        else
+          visual(i) = "O"
+        END IF
+        END DO
+
+        WRITE(*, FMT = "(10(A,(1x)))")visual
+        END DO
+
+
