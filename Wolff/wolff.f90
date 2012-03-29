@@ -3,7 +3,7 @@ PROGRAM wolff
       IMPLICIT NONE
       INTEGER, PARAMETER:: length = 10, latsize = length * length
       INTEGER, PARAMETER:: steps = 500000
-      REAL*8, PARAMETER:: tau = 0.1
+      REAL*8, PARAMETER:: tau = 100
       REAL*8, PARAMETER:: beta = 1 / tau
       INTEGER:: lattice(latsize) = 1
       INTEGER:: i, mag
@@ -178,7 +178,7 @@ PROGRAM wolff
           CALL RANDOM_NUMBER(rand1)
 
           !determine whether a bond is built
-          bond = (rand1.LT.mc)
+          bond = (rand1.GT.mc)
 !          print *, mc, rand1, bond
           END FUNCTION bond
 
