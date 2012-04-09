@@ -2,13 +2,14 @@
 PROGRAM wolff
       IMPLICIT NONE
       INTEGER, PARAMETER:: length = 10, latsize = length * length
-      INTEGER, PARAMETER:: eq = 100000, steps = 100000, tsteps = 6
-      REAL*8, PARAMETER:: tsize = 0.5
-      INTEGER:: lattice(latsize), sum_lat(latsize)
+      INTEGER, PARAMETER:: eq = 100000, steps = 100, tsteps = 300
+      REAL*8, PARAMETER:: tsize = 0.01
+      INTEGER:: lattice(latsize)
       INTEGER:: i,j, mag
-      REAL*8:: tau, beta, av_lat(latsize), magav, magsum
+      REAL*8:: tau, beta,  magav, magsum, mag2sum, mag2av
+      REAL*8:: ensum, enav, en2sum, en2av
 
-      OPEN (UNIT=20,FILE="magnetization.dat",ACTION="write",STATUS="replace")
+      OPEN (UNIT=20,FILE="averages.dat",ACTION="write",STATUS="replace")
 
       !Initialize the seed
       CALL init_random_seed()
@@ -17,8 +18,10 @@ PROGRAM wolff
         !Initialize variables
         tau = tsize * DFLOAT(j)
         beta = 1.0d0 / tau
-        sum_lat = 0
         magsum = 0
+        mag2sum = 0
+        ensum = 0
+        en2sum = 0
 
         !Initialize the lattice
         CALL init_lattice(lattice)
@@ -27,23 +30,31 @@ PROGRAM wolff
         CALL equilibrate(lattice)
 
         !Initialize magnetization measurements
-        sum_lat = sum_lat + lattice
+        magsum = magsum + ABS(SUM(lattice))
+        mag2sum = mag2sum + (ABS(SUM(lattice)) * ABS(SUM(lattice)))
+        ensum = ensum + energy(lattice)
+        en2sum = en2sum + energy(lattice) * energy(lattice)
 
         !Do the wolff algorithm and take measurements for the given number of
         !steps
         DO i = 1, steps
-
           !Flip a cluster
           CALL flip_cluster(lattice)
 
           !Measure magnetization
-          sum_lat = sum_lat + lattice
-!          WRITE(20,*) i, SUM(lattice)
+          magsum = magsum + ABS(SUM(lattice))
+          mag2sum = mag2sum + (ABS(SUM(lattice)) * ABS(SUM(lattice)))
+          ensum = ensum + energy(lattice)
+          en2sum = en2sum + energy(lattice) * energy(lattice)
+
           END DO
 
-        av_lat = ABS(DFLOAT(sum_lat)) / (steps + 1)
-        print *, SUM(sum_lat), SUM(av_lat), SUM(av_lat) / (latsize)
-        WRITE(20,*) tau, SUM(av_lat) / (latsize)
+        magav =  (magsum / DFLOAT(steps + 1)) /DFLOAT(latsize)
+        mag2av =  (mag2sum / DFLOAT(steps + 1)) /DFLOAT(latsize)
+        enav = ensum / DFLOAT(steps + 1)
+        en2av = en2sum / DFLOAT(steps + 1)
+
+        WRITE(20,*) tau, magav, mag2av, enav, en2av
         END DO
         CLOSE(20)
 
@@ -87,7 +98,7 @@ PROGRAM wolff
           REAL:: rand1
           INTEGER:: head, tail
           INTEGER:: site, neighbor
-          LOGICAL:: will_bond
+          LOGICAL:: will_bond, parallel
 
           !Initialize head and tail
           head = 1
@@ -111,6 +122,8 @@ PROGRAM wolff
             !Check North neighbor
             neighbor = north(site)
             will_bond = bond(neighbor,lat)
+            parallel = ((lat(site).EQ.(lat(neighbor)*(-1))).AND.will_bond)
+
             IF ((lat(site).EQ.(lat(neighbor)*(-1))).AND.will_bond) THEN
               lat(neighbor) = lat(neighbor) * (-1)
               queue(tail) = neighbor
@@ -160,7 +173,7 @@ PROGRAM wolff
         PURE INTEGER FUNCTION south(site)
           INTEGER, INTENT(IN):: site
           south = MODULO((site + length), latsize ) + (1 - CEILING( &
-            MODULO(site + length, latsize)/ FLOAT(latsize))) * 25
+            MODULO(site + length, latsize)/ FLOAT(latsize))) * latsize
           END FUNCTION south
 
         !Return the index of the east neighbor
@@ -173,7 +186,7 @@ PROGRAM wolff
         PURE INTEGER FUNCTION west(site)
           INTEGER, INTENT(IN):: site
           west =  ((site - 1) / length) * length +  MODULO(site - 1, length) &
-            + (1 - CEILING(MODULO(site - 1, length)/ FLOAT(length))) * 5
+            + (1 - CEILING(MODULO(site - 1, length)/ FLOAT(length))) * length
           END FUNCTION west
 
         !Feed in the site a bond is being built to, and return true or false
@@ -183,13 +196,27 @@ PROGRAM wolff
           REAL*8 :: mc, rand1
           INTEGER:: n,s,e,w, ein, ef, echan
 
-          mc = EXP( - (beta))
+          mc = 1 - EXP( - 2 *  (beta))
           !generate random number
           CALL RANDOM_NUMBER(rand1)
-
           !determine whether a bond is built
           bond = (rand1.LT.mc)
-!          print *, mc, rand1, bond
           END FUNCTION bond
+
+        REAL*8 FUNCTION energy(lat)
+          INTEGER:: lat(latsize), n, e, s, w, i
+
+          energy = 0
+
+          DO i = 1, latsize
+            n = north(i)
+            e = east(i)
+            s = south(i)
+            w = west(i)
+
+            energy = energy + lat(i) * (lat(n) + lat(e) + lat(s) + lat(w))
+            END DO
+
+          END FUNCTION energy
 
       END PROGRAM
