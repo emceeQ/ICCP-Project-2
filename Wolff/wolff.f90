@@ -2,7 +2,7 @@
 PROGRAM wolff
       IMPLICIT NONE
       INTEGER, PARAMETER:: length = 10, latsize = length * length
-      INTEGER, PARAMETER:: eq = 100000, steps = 100, tsteps = 300
+      INTEGER, PARAMETER:: eq = 100000, steps = 100, tsteps = 400
       REAL*8, PARAMETER:: tsize = 0.01
       INTEGER:: lattice(latsize)
       INTEGER:: i,j, mag
